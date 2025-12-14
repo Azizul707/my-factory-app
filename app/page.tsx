@@ -4,16 +4,19 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Users, CheckCircle, Calendar, LogOut, Trash2, ChevronDown, ChevronUp, Lock, FileText } from "lucide-react";
 
 // --- Utility: বাংলা নাম্বার কনভার্টার ---
-const bnToEn = (str) => {
-  return str.replace(/[০-৯]/g, (d) => "০১২৩৪৫৬৭৮৯".indexOf(d));
+// ফিক্স: str এর টাইপ 'string' বা 'any' বলে দেওয়া হয়েছে
+const bnToEn = (str: any) => {
+  if (!str) return ""; 
+  return str.toString().replace(/[০-৯]/g, (d: string) => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
 };
 
-// --- Login Page ---
-function LoginPage({ onLogin }) {
+// --- Login Page Component ---
+// ফিক্স: props এর টাইপ 'any' দেওয়া হয়েছে
+function LoginPage({ onLogin }: { onLogin: any }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     setError("");
@@ -62,18 +65,18 @@ function LoginPage({ onLogin }) {
   );
 }
 
-// --- Main App ---
+// --- Main App Component ---
 export default function Home() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [view, setView] = useState("LOADING");
-  const [employees, setEmployees] = useState([]);
-  const [sections, setSections] = useState([]); 
-  const [selectedSection, setSelectedSection] = useState(""); // এটি আবার যোগ করা হয়েছে
-  const [globalStats, setGlobalStats] = useState({ totalOnLeave: 0, leaveList: [] });
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]); 
+  const [selectedSection, setSelectedSection] = useState(""); 
+  const [globalStats, setGlobalStats] = useState({ totalOnLeave: 0, leaveList: [] as any[] });
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSectionModal, setShowSectionModal] = useState(false); 
-  const [expandedEmp, setExpandedEmp] = useState(null); 
+  const [expandedEmp, setExpandedEmp] = useState<string | null>(null); 
 
   useEffect(() => {
     checkUser();
@@ -89,7 +92,6 @@ export default function Home() {
             setView("HOME");
             fetchGlobalStats();
         } else {
-            // লিডার হলে তার সেকশন সেট করা হচ্ছে
             fetchSectionData(data.section);
         }
     } else {
@@ -109,7 +111,7 @@ export default function Home() {
     setView("LOGIN");
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     if (!dateString) return "";
     return new Date(dateString).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
   };
@@ -117,14 +119,13 @@ export default function Home() {
   const fetchGlobalStats = async () => {
     const res = await fetch(`/api/employees`); 
     const data = await res.json();
-    const onLeave = data.filter(e => e.status === 'OnLeave');
+    const onLeave = data.filter((e: any) => e.status === 'OnLeave');
     setGlobalStats({ totalOnLeave: onLeave.length, leaveList: onLeave });
   };
 
-  // সেকশন ডাটা লোড করার সময় selectedSection আপডেট করা হচ্ছে
-  const fetchSectionData = async (sec) => {
+  const fetchSectionData = async (sec: string) => {
     setLoading(true);
-    setSelectedSection(sec); // ফিক্স: সেকশন নাম মনে রাখা হচ্ছে
+    setSelectedSection(sec); 
     const res = await fetch(`/api/employees?section=${sec}`);
     const data = await res.json();
     setEmployees(data);
@@ -132,23 +133,21 @@ export default function Home() {
     setView("SECTION");
   };
 
-  const handleAction = async (id, action, payload = {}) => {
+  const handleAction = async (id: string, action: string, payload: any = {}) => {
     if(!confirm("Are you sure?")) return;
     await fetch('/api/employees', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action, payload }) });
     
-    // রিফ্রেশ করার সময় সঠিক সেকশন কল করা হচ্ছে
     if(view === 'SECTION') fetchSectionData(selectedSection);
-    if(user.role === 'ADMIN') fetchGlobalStats();
+    if(user?.role === 'ADMIN') fetchGlobalStats();
   };
 
-  const handleAddEmployee = async (e) => {
+  const handleAddEmployee = async (e: any) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const rawSalary = formData.get("salary");
+    const rawSalary = formData.get("salary") as string;
     const salary = Number(bnToEn(rawSalary)); 
 
-    // ফিক্স: এখন সরাসরি selectedSection ব্যবহার করা হচ্ছে, তাই ভুল হওয়ার সুযোগ নেই
-    const sec = user.role === 'ADMIN' ? selectedSection : user.section;
+    const sec = user?.role === 'ADMIN' ? selectedSection : user.section;
     
     await fetch('/api/employees', { method: 'POST', body: JSON.stringify({
       name: formData.get("name"),
@@ -159,7 +158,7 @@ export default function Home() {
     fetchSectionData(sec);
   };
 
-  const handleAddSection = async (e) => {
+  const handleAddSection = async (e: any) => {
       e.preventDefault();
       const form = e.target;
       const data = {
@@ -177,13 +176,13 @@ export default function Home() {
       }
   };
 
-  const handleDeleteSection = async (id) => {
+  const handleDeleteSection = async (id: string) => {
       if(!confirm("সেকশন ডিলিট করলে এর ডাটা হারাবে না, কিন্তু লগিন এক্সেস চলে যাবে। আপনি কি নিশ্চিত?")) return;
       await fetch('/api/sections', { method: 'DELETE', body: JSON.stringify({ id }) });
       fetchSections();
   };
 
-  const handleAdvance = (id) => {
+  const handleAdvance = (id: string) => {
       const rawAmount = prompt("টাকার পরিমাণ (বাংলায় লিখলেও হবে):");
       if(!rawAmount) return;
       const amount = bnToEn(rawAmount); 
@@ -337,7 +336,7 @@ export default function Home() {
 
               {isExpanded && emp.advances.length > 0 && (
                   <div className="bg-yellow-50/50 px-4 py-2 mx-4 rounded mb-2 border border-yellow-100">
-                      {emp.advances.map((adv, idx) => (
+                      {emp.advances.map((adv: any, idx: number) => (
                           <div key={idx} className="flex justify-between text-xs text-gray-600 border-b border-yellow-100 last:border-0 py-1">
                               <span>{formatDate(adv.date)}</span>
                               <span className="font-bold">৳{adv.amount}</span>
